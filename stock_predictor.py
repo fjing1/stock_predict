@@ -310,8 +310,9 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
     
     if bullish_picks:
         bullish_df = pd.DataFrame(bullish_picks)
-        # Round numerical columns to 2 decimal places
-        numerical_cols = ['predicted_return', 'confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
+        # Convert predicted_return to percentage and round numerical columns to 2 decimal places
+        bullish_df['predicted_return'] = (bullish_df['predicted_return'] * 100).round(2)
+        numerical_cols = ['confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
         for col in numerical_cols:
             if col in bullish_df.columns:
                 bullish_df[col] = bullish_df[col].round(2)
@@ -322,8 +323,9 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
     
     if bearish_picks:
         bearish_df = pd.DataFrame(bearish_picks)
-        # Round numerical columns to 2 decimal places
-        numerical_cols = ['predicted_return', 'confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
+        # Convert predicted_return to percentage and round numerical columns to 2 decimal places
+        bearish_df['predicted_return'] = (bearish_df['predicted_return'] * 100).round(2)
+        numerical_cols = ['confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
         for col in numerical_cols:
             if col in bearish_df.columns:
                 bearish_df[col] = bearish_df[col].round(2)

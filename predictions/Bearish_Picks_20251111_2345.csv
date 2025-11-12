@@ -1,0 +1,5 @@
+symbol,predicted_return,confidence_score,current_price,stop_loss,take_profit,risk_score,risk_level,score
+HUM,-0.88,70.88,92.12,87.49,98.29,24.76,LOW,-43.86
+MMM,-0.82,70.82,289.16,281.47,299.41,18.3,LOW,-40.92
+CSCO,-0.34,70.34,1029.2,992.51,1078.12,19.41,LOW,-16.77
+PEP,-0.28,70.28,112.4,110.34,115.14,14.63,LOW,-13.87
