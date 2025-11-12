@@ -23,23 +23,23 @@ class EnhancedEnsembleModel:
         """Create diverse base models for ensemble"""
         models = {
             'hgb_cls': HistGradientBoostingClassifier(
-                max_depth=8, learning_rate=0.03, max_iter=500, 
+                max_depth=8, learning_rate=0.03, max_iter=2000,  # Increased from 500
                 l2_regularization=0.1, random_state=self.random_state
             ),
             'rf_cls': RandomForestClassifier(
-                n_estimators=200, max_depth=10, min_samples_split=10,
-                min_samples_leaf=5, random_state=self.random_state
+                n_estimators=500, max_depth=12, min_samples_split=8,  # More trees, deeper
+                min_samples_leaf=3, random_state=self.random_state, n_jobs=-1  # Use all cores
             ),
             'lr_cls': LogisticRegression(
                 C=0.1, max_iter=1000, random_state=self.random_state
             ),
             'hgb_reg': HistGradientBoostingRegressor(
-                max_depth=8, learning_rate=0.03, max_iter=500,
+                max_depth=8, learning_rate=0.03, max_iter=2000,  # Increased from 500
                 l2_regularization=0.1, random_state=self.random_state
             ),
             'rf_reg': RandomForestRegressor(
-                n_estimators=200, max_depth=10, min_samples_split=10,
-                min_samples_leaf=5, random_state=self.random_state
+                n_estimators=500, max_depth=12, min_samples_split=8,  # More trees, deeper
+                min_samples_leaf=3, random_state=self.random_state, n_jobs=-1  # Use all cores
             ),
             'ridge_reg': Ridge(alpha=1.0, random_state=self.random_state)
         }
@@ -56,7 +56,7 @@ class EnhancedEnsembleModel:
             'l2_regularization': [0.05, 0.1, 0.2]
         }
         
-        hgb_cls = HistGradientBoostingClassifier(max_iter=300, random_state=self.random_state)
+        hgb_cls = HistGradientBoostingClassifier(max_iter=1000, random_state=self.random_state)  # Increased from 300
         hgb_cls_search = GridSearchCV(hgb_cls, hgb_cls_params, cv=tscv, scoring='roc_auc', n_jobs=-1)
         hgb_cls_search.fit(X, y_cls)
         
@@ -67,7 +67,7 @@ class EnhancedEnsembleModel:
             'l2_regularization': [0.05, 0.1, 0.2]
         }
         
-        hgb_reg = HistGradientBoostingRegressor(max_iter=300, random_state=self.random_state)
+        hgb_reg = HistGradientBoostingRegressor(max_iter=1000, random_state=self.random_state)  # Increased from 300
         hgb_reg_search = GridSearchCV(hgb_reg, hgb_reg_params, cv=tscv, scoring='r2', n_jobs=-1)
         hgb_reg_search.fit(X, y_reg)
         
