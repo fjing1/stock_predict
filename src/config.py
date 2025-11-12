@@ -1,16 +1,16 @@
-from datetime import datetime
-from pathlib import Path
+#!/usr/bin/env python3
+"""
+Configuration settings for stock prediction
+"""
 
-# Paths
-ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
-LOG_DIR = ROOT / "logs"
-OUTPUT_FILE = ROOT / f"ML_Picks_{datetime.now().strftime('%Y%m%d')}.xlsx"
+# Training period for daily data
+TRAIN_PERIOD_DAILY = "2y"
 
-# yfinance / model parameters
-TRAIN_PERIOD_DAILY = "3y"   # 3 years daily data for training
-TARGET_HORIZON_D = 3        # predict next 3 days
-INTRADAY_INTERVAL = "1m"
-INTRADAY_PERIOD = "7d"
-DEFAULT_RTH = True           # regular trading hours only
-DEFAULT_TOPK = 20
+# Target horizon in days
+TARGET_HORIZON_D = 3
+
+# Default parameters
+DEFAULT_LOOKBACK_DAYS = 252  # 1 year of trading days
+DEFAULT_MIN_VOLUME = 100000
+DEFAULT_MIN_PRICE = 1.0
+DEFAULT_MAX_PRICE = 10000.0
