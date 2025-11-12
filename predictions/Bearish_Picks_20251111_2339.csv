@@ -1,0 +1,5 @@
+symbol,predicted_return,confidence_score,current_price,stop_loss,take_profit,risk_score,risk_level,score
+WMT,-0.01,70.82,289.16,281.47,299.41,18.3,LOW,-40.92
+SEDG,-0.01,70.6,618.94,587.07,661.43,24.35,LOW,-30.09
+RIVN,-0.0,70.32,497.1,482.37,516.73,17.75,LOW,-15.8
+NFLX,-0.0,70.28,112.4,110.34,115.14,14.63,LOW,-13.87
