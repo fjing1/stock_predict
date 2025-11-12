@@ -1,0 +1,25 @@
+STOCK PREDICTION SUMMARY - 2025-11-11 23:45:20
+============================================================
+Symbols analyzed: 22
+Processing time: 10.9 seconds
+Processing rate: 2.0 stocks/second
+
+TOP BULLISH PICK:
+Symbol: SPOT
+Expected Return: +1.94%
+Confidence: 71.9%
+Current Price: $493.15
+Target Price: $502.72
+Stop Loss: $483.25
+Take Profit: $506.35
+Risk Level: LOW
+
+TOP BEARISH PICK:
+Symbol: HUM
+Expected Return: -0.88%
+Confidence: 70.9%
+Current Price: $92.12
+Target Price: $91.31
+Stop Loss: $87.49
+Take Profit: $98.29
+Risk Level: LOW
