@@ -313,7 +313,7 @@ class StockPredictionVisualizer:
         title = f'{symbol} Stock Prediction - {return_pct:+.2f}% Expected Return ({confidence:.1f}% Confidence) - {current_time}'
         fig.suptitle(title, fontsize=16, fontweight='bold', y=0.98)
 
-def create_top_picks_charts(bullish_pick, bearish_pick, stock_data, output_dir="charts"):
+def create_top_picks_charts(bullish_pick, bearish_pick, stock_data, output_dir="predictions/charts"):
     """
     Create charts for the top bullish and bearish picks only
     
