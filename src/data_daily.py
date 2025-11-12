@@ -6,7 +6,12 @@ from .config import TRAIN_PERIOD_DAILY, TARGET_HORIZON_D
 
 def dl_daily(symbol: str, period: str = TRAIN_PERIOD_DAILY) -> pd.DataFrame:
     df = yf.download(symbol, period=period, interval="1d", auto_adjust=False, progress=False)
-    return df if df is not None and not df.empty else pd.DataFrame()
+    if df is not None and not df.empty:
+        # Flatten MultiIndex columns if present
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.droplevel(1)
+        return df
+    return pd.DataFrame()
 
 def add_daily_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """Add RSI, MACD, MAs, Bollinger, etc."""
