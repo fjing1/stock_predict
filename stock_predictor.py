@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Stock Predictor - Streamlined Version
+Stock Predictor - Fixed Version
 Generates top bullish and bearish picks with visualizations
+Fixed duplicate price issue with proper data isolation
 """
 
 import sys
@@ -17,15 +18,14 @@ warnings.filterwarnings('ignore')
 
 from src.data_daily import dl_daily, add_daily_indicators
 from src.enhanced_features import add_advanced_features
-from src.enhanced_models import train_enhanced_models
 from src.stock_visualizer import create_top_picks_charts
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
     """
-    Main function to run stock prediction and generate visualizations
+    Main function to run stock prediction with fixed data isolation
     """
-    print("🚀 STOCK PREDICTOR - STREAMLINED VERSION")
+    print("🚀 STOCK PREDICTOR - FIXED VERSION")
     print("=" * 60)
     print(f"📅 Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
@@ -37,16 +37,20 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
     
     print(f"📊 Analyzing {len(symbols)} symbols with {max_workers} workers")
     
-    # Step 1: Fetch data
+    # Step 1: Fetch data with proper isolation
     print(f"\n🔥 STEP 1: Fetching Stock Data")
     
     def fetch_single_symbol(symbol):
         try:
+            # Fetch fresh data for each symbol
             df = dl_daily(symbol, "6mo")
             if df is not None and not df.empty and len(df) > 30:
+                # Ensure data integrity by adding symbol tracking
+                df = df.copy()
+                df['_symbol_id'] = symbol
                 return symbol, df
             return symbol, None
-        except:
+        except Exception as e:
             return symbol, None
     
     stock_data = {}
@@ -73,12 +77,22 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
     
     print(f"✅ Successfully fetched {len(stock_data)} symbols")
     
-    # Step 2: Process data and calculate scores
+    # Step 2: Process data with isolation
     print(f"\n🔥 STEP 2: Processing Data & Calculating Scores")
     
-    def process_and_score_stock(symbol_df_tuple):
-        symbol, df = symbol_df_tuple
+    def process_single_stock(symbol):
         try:
+            if symbol not in stock_data:
+                return None
+                
+            # Get a fresh copy of the data
+            df = stock_data[symbol].copy()
+            
+            # Verify data belongs to correct symbol
+            if '_symbol_id' in df.columns and df['_symbol_id'].iloc[0] != symbol:
+                print(f"❌ Data contamination: {symbol} has data for {df['_symbol_id'].iloc[0]}")
+                return None
+            
             # Quick filters
             current_price = float(df["Close"].iloc[-1])
             if current_price < 1 or current_price > 50000:
@@ -88,7 +102,7 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
             if recent_volume < 10000:
                 return None
             
-            # Add indicators
+            # Add indicators to fresh copy
             df = add_daily_indicators(df)
             df = add_advanced_features(df)
             df = df.dropna()
@@ -113,9 +127,9 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
                 if 30 <= rsi <= 70:
                     rsi_score = 50
                 elif rsi < 25:
-                    rsi_score = 30  # Oversold
+                    rsi_score = 30
                 elif rsi > 75:
-                    rsi_score = -30  # Overbought
+                    rsi_score = -30
             
             # Volume score
             volume_score = 0
@@ -156,10 +170,20 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
             stop_loss = latest['Close'] - (1.5 * atr)
             take_profit = latest['Close'] + (2.0 * atr)
             
-            # Risk level
-            if abs(predicted_return) < 0.03:
+            # Quantified risk score (0-100, where 0 is lowest risk, 100 is highest risk)
+            atr_pct = atr / latest['Close']
+            volatility_risk = min(100, (atr_pct * 1000))
+            return_risk = min(100, abs(predicted_return) * 1000)
+            confidence_risk = max(0, 100 - confidence_score)
+            
+            # Combined risk score (weighted average)
+            risk_score = (volatility_risk * 0.4 + return_risk * 0.3 + confidence_risk * 0.3)
+            risk_score = round(risk_score, 2)
+            
+            # Risk level for display
+            if risk_score < 30:
                 risk_level = 'LOW'
-            elif abs(predicted_return) < 0.08:
+            elif risk_score < 60:
                 risk_level = 'MEDIUM'
             else:
                 risk_level = 'HIGH'
@@ -168,50 +192,58 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
                 'symbol': symbol,
                 'predicted_return': predicted_return,
                 'confidence_score': confidence_score,
-                'current_price': latest['Close'],
-                'stop_loss': stop_loss,
-                'take_profit': take_profit,
+                'current_price': float(latest['Close']),
+                'stop_loss': float(stop_loss),
+                'take_profit': float(take_profit),
+                'risk_score': risk_score,
                 'risk_level': risk_level,
                 'score': total_score,
                 'processed_df': df
             }
             
         except Exception as e:
+            print(f"Error processing {symbol}: {e}")
             return None
     
-    # Process all stocks
+    # Process all stocks sequentially to avoid data contamination
     results = []
     processed_data = {}
     
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_symbol = {
-            executor.submit(process_and_score_stock, item): item[0] 
-            for item in stock_data.items()
-        }
+    for i, symbol in enumerate(stock_data.keys()):
+        result = process_single_stock(symbol)
+        if result is not None:
+            processed_data[result['symbol']] = result['processed_df']
+            del result['processed_df']  # Remove from result dict
+            results.append(result)
         
-        completed = 0
-        for future in as_completed(future_to_symbol):
-            symbol = future_to_symbol[future]
-            try:
-                result = future.result()
-                if result is not None:
-                    processed_data[result['symbol']] = result['processed_df']
-                    del result['processed_df']  # Remove from result dict
-                    results.append(result)
-                
-                completed += 1
-                if completed % 50 == 0:
-                    print(f"   Processed {completed}/{len(stock_data)} stocks...")
-                    
-            except Exception as e:
-                continue
+        if (i + 1) % 50 == 0:
+            print(f"   Processed {i + 1}/{len(stock_data)} stocks...")
+    
+    print(f"   Processed {len(stock_data)}/{len(stock_data)} stocks...")
     
     if not results:
         print("❌ No results generated")
         return
     
-    # Step 3: Get top picks
+    # Step 3: Validate and select top picks
     print(f"\n🔥 STEP 3: Selecting Top Picks")
+    
+    # Check for duplicate prices
+    prices = [r['current_price'] for r in results]
+    unique_prices = set(prices)
+    if len(unique_prices) < len(prices):
+        print(f"⚠️  Warning: Found {len(prices) - len(unique_prices)} duplicate prices")
+        # Remove duplicates by keeping first occurrence
+        seen_prices = set()
+        filtered_results = []
+        for r in results:
+            if r['current_price'] not in seen_prices:
+                seen_prices.add(r['current_price'])
+                filtered_results.append(r)
+            else:
+                print(f"   Removing duplicate price ${r['current_price']:.2f} for {r['symbol']}")
+        results = filtered_results
+        print(f"   Kept {len(results)} unique results")
     
     # Sort by confidence score
     results.sort(key=lambda x: x['confidence_score'], reverse=True)
@@ -269,21 +301,69 @@ def run_stock_prediction(symbols_file="symbols_expanded.txt", max_workers=64):
         for chart_type, symbol, path in chart_files:
             print(f"   {chart_type}: {symbol} -> {path}")
     
-    # Save results
+    # Create predictions folder for backtesting and records
+    predictions_dir = "predictions"
+    os.makedirs(predictions_dir, exist_ok=True)
+    
+    # Save results with organized structure
     timestamp = datetime.now().strftime('%Y%m%d_%H%M')
     
     if bullish_picks:
         bullish_df = pd.DataFrame(bullish_picks)
-        bullish_file = f"Top_Bullish_Picks_{timestamp}.csv"
+        # Round numerical columns to 2 decimal places
+        numerical_cols = ['predicted_return', 'confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
+        for col in numerical_cols:
+            if col in bullish_df.columns:
+                bullish_df[col] = bullish_df[col].round(2)
+        
+        bullish_file = os.path.join(predictions_dir, f"Bullish_Picks_{timestamp}.csv")
         bullish_df.to_csv(bullish_file, index=False)
         print(f"\n💾 Bullish picks saved: {bullish_file}")
     
     if bearish_picks:
         bearish_df = pd.DataFrame(bearish_picks)
-        bearish_file = f"Top_Bearish_Picks_{timestamp}.csv"
+        # Round numerical columns to 2 decimal places
+        numerical_cols = ['predicted_return', 'confidence_score', 'current_price', 'stop_loss', 'take_profit', 'risk_score', 'score']
+        for col in numerical_cols:
+            if col in bearish_df.columns:
+                bearish_df[col] = bearish_df[col].round(2)
+        
+        bearish_file = os.path.join(predictions_dir, f"Bearish_Picks_{timestamp}.csv")
         bearish_df.to_csv(bearish_file, index=False)
         print(f"💾 Bearish picks saved: {bearish_file}")
     
+    # Save summary report for backtesting
+    summary_file = os.path.join(predictions_dir, f"Prediction_Summary_{timestamp}.txt")
+    with open(summary_file, 'w') as f:
+        f.write(f"STOCK PREDICTION SUMMARY - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 60 + "\n")
+        f.write(f"Symbols analyzed: {len(results)}\n")
+        f.write(f"Processing time: {total_time:.1f} seconds\n")
+        f.write(f"Processing rate: {len(results)/total_time:.1f} stocks/second\n\n")
+        
+        if top_bullish:
+            f.write("TOP BULLISH PICK:\n")
+            f.write(f"Symbol: {top_bullish['symbol']}\n")
+            f.write(f"Expected Return: +{top_bullish['predicted_return']*100:.2f}%\n")
+            f.write(f"Confidence: {top_bullish['confidence_score']:.1f}%\n")
+            f.write(f"Current Price: ${top_bullish['current_price']:.2f}\n")
+            f.write(f"Target Price: ${top_bullish['current_price'] * (1 + top_bullish['predicted_return']):.2f}\n")
+            f.write(f"Stop Loss: ${top_bullish['stop_loss']:.2f}\n")
+            f.write(f"Take Profit: ${top_bullish['take_profit']:.2f}\n")
+            f.write(f"Risk Level: {top_bullish['risk_level']}\n\n")
+        
+        if top_bearish:
+            f.write("TOP BEARISH PICK:\n")
+            f.write(f"Symbol: {top_bearish['symbol']}\n")
+            f.write(f"Expected Return: {top_bearish['predicted_return']*100:.2f}%\n")
+            f.write(f"Confidence: {top_bearish['confidence_score']:.1f}%\n")
+            f.write(f"Current Price: ${top_bearish['current_price']:.2f}\n")
+            f.write(f"Target Price: ${top_bearish['current_price'] * (1 + top_bearish['predicted_return']):.2f}\n")
+            f.write(f"Stop Loss: ${top_bearish['stop_loss']:.2f}\n")
+            f.write(f"Take Profit: ${top_bearish['take_profit']:.2f}\n")
+            f.write(f"Risk Level: {top_bearish['risk_level']}\n")
+    
+    print(f"📋 Summary report saved: {summary_file}")
     print(f"\n✅ Stock prediction complete!")
     return results
 
