@@ -59,7 +59,7 @@ def save_df(df: pd.DataFrame, path: Path):
         # 不打印也行，这里提醒一下
         print(f"⚠️ 未安装 pyarrow 或写 parquet 失败，已回退 CSV: {path.with_suffix('.csv').name}")
 
-def load_df(path: Path) -> pd.DataFrame | None:
+def load_df(path: Path):
     if not path.exists():
         # 尝试csv
         csv = path.with_suffix(".csv")
@@ -140,7 +140,7 @@ def snapshot_save(symbol: str, df: pd.DataFrame, log_fp=None):
     log(f"📝 保存原始快照: {snap_path}", log_fp)
     return snap_path
 
-def append_to_merged(symbol: str, new_df: pd.DataFrame, log_fp=None) -> tuple[int, int]:
+def append_to_merged(symbol: str, new_df: pd.DataFrame, log_fp=None):
     merged_path = MERGED_DIR / f"{symbol}.parquet"
     old_df = load_df(merged_path)
 
@@ -157,7 +157,7 @@ def append_to_merged(symbol: str, new_df: pd.DataFrame, log_fp=None) -> tuple[in
     log(f"📦 合并 {symbol}: 新增 {max(0, after_rows - before_rows)} 行，累计 {after_rows} 行", log_fp)
     return (max(0, after_rows - before_rows), after_rows)
 
-def clean_old_raw(symbols: list[str], keep_days: int, log_fp=None):
+def clean_old_raw(symbols, keep_days: int, log_fp=None):
     if keep_days <= 0:
         return
     cutoff = date.today() - timedelta(days=keep_days)
@@ -181,7 +181,7 @@ def clean_old_raw(symbols: list[str], keep_days: int, log_fp=None):
                 continue
     log(f"🧹 清理原始快照完成：删除 {removed} 个旧文件（早于 {keep_days} 天）", log_fp)
 
-def load_symbols(args) -> list[str]:
+def load_symbols(args):
     symbols = []
     if args.symbols:
         symbols += [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
